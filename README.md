@@ -1,6 +1,4 @@
 
-# Fractalaxy
+This project is a Mandelbrot viewer made with Godot. Use the mouse wheel to zoom, drag to pan.
 
-This project is a Mandelbrot viewer mad with Godot
-
-A [live demo](https://bfxdev.github.io/fractalaxy/HTML5/index.html) is available
+[LIVE DEMO](https://bfxdev.github.io/fractalaxy/HTML5/index.html)
