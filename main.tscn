@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://main.gdshader" type="Shader" id=1]
+[ext_resource path="res://FractalRenderer.gd" type="Script" id=2]
+[ext_resource path="res://gradient-alpha-yellow-red-gray.png" type="Texture" id=3]
+
+[sub_resource type="ShaderMaterial" id=1]
+shader = ExtResource( 1 )
+shader_param/MaximumIteration = 150
+shader_param/Resolution = Vector2( 1024, 600 )
+shader_param/Center = Vector3( -0.55, 0, 0 )
+shader_param/Radius = 1.3
+shader_param/Ray = Vector3( 0, 0, -1 )
+shader_param/Rotation = Vector3( 0, 0, 0 )
+shader_param/Gradient = ExtResource( 3 )
+
+[node name="Control" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="FractalRenderer" type="Panel" parent="MarginContainer"]
+material = SubResource( 1 )
+margin_right = 1024.0
+margin_bottom = 600.0
+script = ExtResource( 2 )
+
+[connection signal="gui_input" from="MarginContainer/FractalRenderer" to="MarginContainer/FractalRenderer" method="_on_FractalRenderer_gui_input"]

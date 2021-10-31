@@ -1,0 +1,14 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=2]
+
+[ext_resource path="res://main.gdshader" type="Shader" id=1]
+[ext_resource path="res://gradient-alpha-yellow-red-gray.png" type="Texture" id=2]
+
+[resource]
+shader = ExtResource( 1 )
+shader_param/MaximumIteration = 150
+shader_param/Resolution = Vector2( 1024, 600 )
+shader_param/Center = Vector3( 0.5, 0, 0 )
+shader_param/Radius = 1.0
+shader_param/Ray = Vector3( 0, 0, -1 )
+shader_param/Rotation = Vector3( 0, 0, 0 )
+shader_param/Gradient = ExtResource( 2 )
