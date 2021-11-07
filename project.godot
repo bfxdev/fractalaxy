@@ -18,6 +18,10 @@ config/icon="res://Fractalaxy-logo.png"
 
 window/handheld/orientation="sensor"
 
+[input_devices]
+
+pointing/emulate_mouse_from_touch=false
+
 [physics]
 
 common/enable_pause_aware_picking=true
