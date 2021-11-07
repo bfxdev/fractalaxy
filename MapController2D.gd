@@ -1,21 +1,21 @@
 extends Panel # TODO change to Control or something similar
 
+# Orthogonal basis vectors
+var Origin : Vector2         = Vector2(-2.5, 1.2)
+var HorizontalBasis : Vector2 = Vector2(0.004, 0.0)
+var VerticalBasis : Vector2   = Vector2(0.0, -0.004)
+
 # View-related variables
-var Center : Vector2 = Vector2(-0.55, 0.0)
-var Radius : float = 1.3
-var Rotation : Vector3 = Vector3(0.0, 0.0, 0.0) # TODO: change to single Angle (2D)
-
-# TODO - Alternative parameters to compute first if ViewCircle is false
-var Origin : Vector2 = Vector2(0.0, 0.0)
-var VerticalUnit : Vector2 = Vector2(1.0, 0.0)
-var Zoom : float = 1.0
-
+var Center : Vector2         = Vector2(-0.55, 0.0)
+var Radius : float           = 1.3
+var Rotation : Vector3       = Vector3(0.0, 0.0, 0.0) # TODO: change to single Angle (2D)
+var Zoom : float             = 1.0
 
 # Script parameters
 export var ZoomFactor : float = 1.1
 # TODO: rename with uppercase
-export var MouseButtonPan =     BUTTON_LEFT
-export var MouseButtonZoomIn =  BUTTON_WHEEL_UP
+export var MouseButtonPan     = BUTTON_LEFT
+export var MouseButtonZoomIn  = BUTTON_WHEEL_UP
 export var MouseButtonZoomOut = BUTTON_WHEEL_DOWN
 
 # TODO to be used later
@@ -47,21 +47,39 @@ func _ready():
 # Called every frame to compute the new position using the touch points acquired from input events
 func _process(_delta):
 
-	var dimension = 2.0*Radius/min(rect_size.x, rect_size.y)
+	#var dimension = 2.0*Radius/min(rect_size.x, rect_size.y)
 
-	# PAN if current or previous frame has exactly one point, kept between frames
+	# Zoom around point with special indices 1000 and 1001
+	if touch_points.size() == 1 and touch_points.keys()[0]>=1000:
+		var index = touch_points.keys()[0]
+		var zoom = ZoomFactor if index==1001 else 1/ZoomFactor
+		var point = touch_points[index]
+		Origin += (1-zoom)*point.x*HorizontalBasis + (1-zoom)*point.y*VerticalBasis
+		HorizontalBasis *= zoom
+		VerticalBasis *= zoom
+
+	# Pan if current or previous frame has exactly one point, kept between frames
 	if touch_points.size() == 1 and previous_touch_points.has(touch_points.keys()[0]) or \
 	   previous_touch_points.size() == 1 and touch_points.has(previous_touch_points.keys()[0]):
+		
+		# Determines the index of the touch point and the delta in screen coordinates
 		var index = (touch_points if touch_points.size() == 1 else previous_touch_points).keys()[0]
 		var delta = touch_points[index] - previous_touch_points[index]
-		delta.y *= -1.0
-		Center -= delta*dimension
+		
+		# Adapts values
+		Origin -= delta.x*HorizontalBasis + delta.y*VerticalBasis
+		
+		#delta.y *= -1.0
+		#Center -= delta*dimension
 		#elif touch_points.size() == 2:
 
-	
+
 	# Prepares structure for next frame
 	$Label.text  = "\n\n\nCenter: " + str(Center)
 	$Label.text += "\nRadius: " + str(Radius)
+	$Label.text += "\nOrigin: " + str(Origin)
+	$Label.text += "\nHorizontalBasis: " + str(HorizontalBasis)
+	$Label.text += "\nVerticalBasis: " + str(VerticalBasis)
 	$Label.text += "\ntouch_points: " + str(touch_points)
 	previous_touch_points = touch_points.duplicate()
 	for index in released_touch_points:
@@ -73,6 +91,9 @@ func _process(_delta):
 	material.set_shader_param("Center", Center)
 	material.set_shader_param("Radius", Radius)
 	material.set_shader_param("Rotation", Rotation)
+	material.set_shader_param("Origin", Origin)
+	material.set_shader_param("HorizontalBasis", HorizontalBasis)
+	material.set_shader_param("VerticalBasis", VerticalBasis)
 
 func label_print(string):
 	$Label.text = string + "\n" + $Label.text
@@ -88,22 +109,19 @@ func _input(event : InputEvent) -> void:
 			var delta = event.position-0.5*rect_size
 			delta.y *= -1.0
 			Center += (ZoomFactor-1)*delta*dimension
+			
+			touch_points[1000] = event.position
+			released_touch_points.append(1000)
+
+			
 		if event.pressed and event.button_index == BUTTON_WHEEL_DOWN:
 			var delta = event.position-0.5*rect_size
 			delta.y *= -1.0
 			Center -= (ZoomFactor-1)*delta*dimension
 			Radius *= ZoomFactor
-#		if event.pressed  and event.button_index in [BUTTON_LEFT,BUTTON_MIDDLE]:
-#			dragging_position = event.position
-#			dragging = true
-#		if not event.pressed  and event.button_index in [BUTTON_LEFT,BUTTON_MIDDLE]:
-#			dragging = false
-	
-#	if event is InputEventMouseMotion and dragging:
-#		var delta = event.position-dragging_position
-#		delta.y *= -1.0
-#		Center -= delta*dimension
-#		dragging_position = event.position
+			
+			touch_points[1001] = event.position
+			released_touch_points.append(1001)
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
