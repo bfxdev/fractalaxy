@@ -1,9 +1,9 @@
 extends Panel # TODO change to Control or something similar
 
 # Orthogonal basis vectors
-var Origin : Vector2         = Vector2(-2.5, 1.2)
+var Origin : Vector2         = Vector2(-2.5, -1.2)
 var HorizontalBasis : Vector2 = Vector2(0.004, 0.0)
-var VerticalBasis : Vector2   = Vector2(0.0, -0.004)
+var VerticalBasis : Vector2   = Vector2(0.0, 0.004)
 
 # View-related variables
 var Center : Vector2         = Vector2(-0.55, 0.0)
@@ -13,6 +13,8 @@ var Zoom : float             = 1.0
 
 # Script parameters
 export var ZoomFactor : float = 1.1
+export var PanDelta : float = 10
+
 # TODO: rename with uppercase
 export var MouseButtonPan     = BUTTON_LEFT
 export var MouseButtonZoomIn  = BUTTON_WHEEL_UP
@@ -22,6 +24,7 @@ export var MouseButtonZoomOut = BUTTON_WHEEL_DOWN
 export var VerticalAxisUp : bool = true
 export var ViewCircle : bool = true
 #export var Rotation : bool = true
+
 
 var dragging : bool = false
 var dragging_position : Vector2
@@ -38,6 +41,15 @@ var released_touch_points = []
 # based on single events (from keyboard or clicks).
 var previous_touch_points = {}
 
+# Non-continuous movement triggered by single clicks or keyboard hits
+enum {ZOOM, PAN, ROTATION, NONE}
+var single_movement_type = NONE
+var single_zoom_factor : float
+var single_zoom_center : Vector2
+var single_pan_direction : Vector2 = Vector2(0,0)
+var single_rotation_angle : float
+
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	#print(Time.get_unix_time_from_system())
@@ -47,18 +59,24 @@ func _ready():
 # Called every frame to compute the new position using the touch points acquired from input events
 func _process(_delta):
 
-	#var dimension = 2.0*Radius/min(rect_size.x, rect_size.y)
+	############################ Single movements ##############################
+	match single_movement_type:
+		ZOOM:
+			Origin += (1-single_zoom_factor)*single_zoom_center.x*HorizontalBasis
+			Origin += (1-single_zoom_factor)*single_zoom_center.y*VerticalBasis
+			HorizontalBasis *= single_zoom_factor
+			VerticalBasis *= single_zoom_factor
+		PAN:
+			Origin += single_pan_direction.x*HorizontalBasis
+			Origin += single_pan_direction.y*VerticalBasis
+			
+			
+	single_movement_type = NONE
+	single_pan_direction = Vector2(0,0)
 
-	# Zoom around point with special indices 1000 and 1001
-	if touch_points.size() == 1 and touch_points.keys()[0]>=1000:
-		var index = touch_points.keys()[0]
-		var zoom = ZoomFactor if index==1001 else 1/ZoomFactor
-		var point = touch_points[index]
-		Origin += (1-zoom)*point.x*HorizontalBasis + (1-zoom)*point.y*VerticalBasis
-		HorizontalBasis *= zoom
-		VerticalBasis *= zoom
+	############################ Touch movements ###############################
 
-	# Pan if current or previous frame has exactly one point, kept between frames
+	# PAN if current or previous frame has exactly one point, kept between frames
 	if touch_points.size() == 1 and previous_touch_points.has(touch_points.keys()[0]) or \
 	   previous_touch_points.size() == 1 and touch_points.has(previous_touch_points.keys()[0]):
 		
@@ -69,9 +87,34 @@ func _process(_delta):
 		# Adapts values
 		Origin -= delta.x*HorizontalBasis + delta.y*VerticalBasis
 		
-		#delta.y *= -1.0
-		#Center -= delta*dimension
-		#elif touch_points.size() == 2:
+	# ZOOM/ROTATE if 2 points are kept between frames
+	elif touch_points.size() == 2 and previous_touch_points.size() >= 2 and \
+		 previous_touch_points.has(touch_points.keys()[0]) and \
+		 previous_touch_points.has(touch_points.keys()[1]):
+
+		# Determines the new and previous touch points, and their deltas
+		var index1 = touch_points.keys()[0]
+		var np1 = touch_points[index1]
+		var pp1 = previous_touch_points[index1]
+		#var d1 = np1 - pp1
+		var index2 = touch_points.keys()[1]
+		var np2 = touch_points[index2]
+		var pp2 = previous_touch_points[index2]
+		#var d2 = np2 - pp2
+		
+		# Computes intermediate vectors (see formulas notebook)
+		var A = np1 - np2
+		var B = (pp1.x-pp2.x)*HorizontalBasis + (pp1.y-pp2.y)*VerticalBasis
+		var D = A.x*A.x + A.y*A.y
+		
+		# Solution only if D big enough
+		if D > 1e-6:
+			Origin += pp1.x*HorizontalBasis + pp1.y*VerticalBasis
+			HorizontalBasis.x = (A.x*B.x + A.y*B.y) / D
+			HorizontalBasis.y = (A.x*B.y - A.y*B.x) / D
+			VerticalBasis.x = -HorizontalBasis.y
+			VerticalBasis.y =  HorizontalBasis.x
+			Origin -= np1.x*HorizontalBasis + np1.y*VerticalBasis
 
 
 	# Prepares structure for next frame
@@ -100,43 +143,19 @@ func label_print(string):
 
 
 func _input(event : InputEvent) -> void:
-	
-	var dimension = 2.0*Radius/min(rect_size.x, rect_size.y)
 
+	######################### Mouse events #####################################
+	
 	if event is InputEventMouseButton:
 		if event.pressed and event.button_index == BUTTON_WHEEL_UP:
-			Radius /= ZoomFactor
-			var delta = event.position-0.5*rect_size
-			delta.y *= -1.0
-			Center += (ZoomFactor-1)*delta*dimension
-			
-			touch_points[1000] = event.position
-			released_touch_points.append(1000)
-
+			single_movement_type = ZOOM
+			single_zoom_center = event.position
+			single_zoom_factor = 1/(ZoomFactor*event.factor)
 			
 		if event.pressed and event.button_index == BUTTON_WHEEL_DOWN:
-			var delta = event.position-0.5*rect_size
-			delta.y *= -1.0
-			Center -= (ZoomFactor-1)*delta*dimension
-			Radius *= ZoomFactor
-			
-			touch_points[1001] = event.position
-			released_touch_points.append(1001)
-
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			touch_points[event.index] = event.position
-		else:
-			touch_points.erase(event.index)
-
-	if event is InputEventScreenDrag:
-		touch_points[event.index] = event.position
-
-	# Record position of touch event
-	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		touch_points[event.index] = event.position
-		if event is InputEventScreenTouch and not event.pressed:
-			released_touch_points.append(event.index)
+			single_movement_type = ZOOM
+			single_zoom_center = event.position
+			single_zoom_factor = ZoomFactor*event.factor
 
 	# Simulates a pan with single touch point with index 100
 	if event is InputEventMouseButton and event.button_index == MouseButtonPan or \
@@ -146,101 +165,37 @@ func _input(event : InputEvent) -> void:
 			released_touch_points.append(100)
 
 
-		
+	######################### Touch events #####################################
 
+	# Record position of touch event
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		touch_points[event.index] = event.position
+		if event is InputEventScreenTouch and not event.pressed:
+			released_touch_points.append(event.index)
+
+
+	######################### Keyboard events ##################################
+
+	if event is InputEventKey and event.pressed:
+		if event.scancode == KEY_RIGHT or event.scancode == KEY_D:
+			single_movement_type = PAN
+			single_pan_direction.x += PanDelta
+		if event.scancode == KEY_LEFT or event.scancode == KEY_A:
+			single_movement_type = PAN
+			single_pan_direction.x -= PanDelta
+		if event.scancode == KEY_UP or event.scancode == KEY_W:
+			single_movement_type = PAN
+			single_pan_direction.y -= PanDelta
+		if event.scancode == KEY_DOWN or event.scancode == KEY_S:
+			single_movement_type = PAN
+			single_pan_direction.y += PanDelta
+
+		if event.scancode == KEY_PLUS or event.scancode == KEY_Q:
+			single_movement_type = ZOOM
+			single_zoom_factor = 1/ZoomFactor
+			single_zoom_center = rect_size / 2
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Copied from Multitouch Cubes Demo
-func dummy():
-	var base_state
-	var event
-	var curr_state
-	
-	var finger_count = base_state.size()
-
-	if finger_count == 0:
-		# No fingers => Accept press.
-		if event is InputEventScreenTouch:
-			if event.pressed:
-				# A finger started touching.
-
-				base_state = {
-					event.index: event.position,
-				}
-
-	elif finger_count == 1:
-		# One finger => For rotating around X and Y.
-		# Accept one more press, unpress or drag.
-		if event is InputEventScreenTouch:
-			if event.pressed:
-				# One more finger started touching.
-
-				# Reset the base state to the only current and the new fingers.
-				base_state = {
-					curr_state.keys()[0]: curr_state.values()[0],
-					event.index: event.position,
-				}
-			else:
-				if base_state.has(event.index):
-					# Only touching finger released.
-
-					base_state.clear()
-
-		elif event is InputEventScreenDrag:
-			if curr_state.has(event.index):
-				# Touching finger dragged.
-				# Since rotating around two axes, we have to reset the base constantly.
-				curr_state[event.index] = event.position
-				base_state[event.index] = event.position
-
-	elif finger_count == 2:
-		# Two fingers => To pinch-zoom and rotate around Z.
-		# Accept unpress or drag.
-		if event is InputEventScreenTouch:
-			if not event.pressed and base_state.has(event.index):
-				# Some known touching finger released.
-
-				# Clear the base state
-				base_state.clear()
-
-		elif event is InputEventScreenDrag:
-			if curr_state.has(event.index):
-				# Some known touching finger dragged.
-				curr_state[event.index] = event.position
-
-				# Compute base and current inter-finger vectors.
-				var base_segment = base_state[base_state.keys()[0]] - base_state[base_state.keys()[1]]
-				var new_segment = curr_state[curr_state.keys()[0]] - curr_state[curr_state.keys()[1]]
-
-				# Get the base scale from the base matrix.
-
-
-	# Finger count changed?
-	if base_state.size() != finger_count:
-		# Copy new base state to the current state.
-		curr_state = {}
-		for idx in base_state.keys():
-			curr_state[idx] = base_state[idx]
-		# Remember the base transform.
-
-
+		if event.scancode == KEY_MINUS or event.scancode == KEY_E:
+			single_movement_type = ZOOM
+			single_zoom_factor = ZoomFactor
+			single_zoom_center = rect_size / 2
