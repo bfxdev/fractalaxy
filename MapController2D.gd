@@ -11,9 +11,10 @@ var Radius : float           = 1.3
 var Rotation : Vector3       = Vector3(0.0, 0.0, 0.0) # TODO: change to single Angle (2D)
 var Zoom : float             = 1.0
 
-# Script parameters
+# Parameters of keyboard and mouse triggered movements
 export var ZoomFactor : float = 1.1
 export var PanDelta : float = 10
+export var RotationAngle : float = PI/100
 
 # TODO: rename with uppercase
 export var MouseButtonPan     = BUTTON_LEFT
@@ -69,7 +70,9 @@ func _process(_delta):
 		PAN:
 			Origin += single_pan_direction.x*HorizontalBasis
 			Origin += single_pan_direction.y*VerticalBasis
-			
+		ROTATION:
+			HorizontalBasis = HorizontalBasis.rotated(single_rotation_angle)
+			VerticalBasis = VerticalBasis.rotated(single_rotation_angle)
 			
 	single_movement_type = NONE
 	single_pan_direction = Vector2(0,0)
@@ -118,12 +121,6 @@ func _process(_delta):
 
 
 	# Prepares structure for next frame
-	$Label.text  = "\n\n\nCenter: " + str(Center)
-	$Label.text += "\nRadius: " + str(Radius)
-	$Label.text += "\nOrigin: " + str(Origin)
-	$Label.text += "\nHorizontalBasis: " + str(HorizontalBasis)
-	$Label.text += "\nVerticalBasis: " + str(VerticalBasis)
-	$Label.text += "\ntouch_points: " + str(touch_points)
 	previous_touch_points = touch_points.duplicate()
 	for index in released_touch_points:
 		touch_points.erase(index)
@@ -137,6 +134,12 @@ func _process(_delta):
 	material.set_shader_param("Origin", Origin)
 	material.set_shader_param("HorizontalBasis", HorizontalBasis)
 	material.set_shader_param("VerticalBasis", VerticalBasis)
+
+	# Message
+	$Label.text  = "Arrow keys or mouse to pan - Mouse wheel or PgUp/PgDown to zoom"
+	$Label.text += " - Del/End to rotate - Drag/Pinch on mobile"
+	$Label.text += "\nOrigin: " + str(Origin)
+	$Label.text += "  Basis vectors: " + str(HorizontalBasis) + " " + str(VerticalBasis)
 
 func label_print(string):
 	$Label.text = string + "\n" + $Label.text
@@ -177,25 +180,35 @@ func _input(event : InputEvent) -> void:
 	######################### Keyboard events ##################################
 
 	if event is InputEventKey and event.pressed:
-		if event.scancode == KEY_RIGHT or event.scancode == KEY_D:
+		if event.scancode in [KEY_RIGHT, KEY_D]:
 			single_movement_type = PAN
 			single_pan_direction.x += PanDelta
-		if event.scancode == KEY_LEFT or event.scancode == KEY_A:
+		if event.scancode in [KEY_LEFT, KEY_A]:
 			single_movement_type = PAN
 			single_pan_direction.x -= PanDelta
-		if event.scancode == KEY_UP or event.scancode == KEY_W:
+		if event.scancode in [KEY_UP, KEY_W]:
 			single_movement_type = PAN
 			single_pan_direction.y -= PanDelta
-		if event.scancode == KEY_DOWN or event.scancode == KEY_S:
+		if event.scancode in [KEY_DOWN, KEY_S]:
 			single_movement_type = PAN
 			single_pan_direction.y += PanDelta
 
-		if event.scancode == KEY_PLUS or event.scancode == KEY_Q:
+		if event.scancode in [KEY_KP_ADD, KEY_PAGEDOWN, KEY_R]:
 			single_movement_type = ZOOM
 			single_zoom_factor = 1/ZoomFactor
 			single_zoom_center = rect_size / 2
 	
-		if event.scancode == KEY_MINUS or event.scancode == KEY_E:
+		if event.scancode in [KEY_KP_SUBTRACT, KEY_PAGEUP, KEY_F]:
 			single_movement_type = ZOOM
 			single_zoom_factor = ZoomFactor
 			single_zoom_center = rect_size / 2
+
+		if event.scancode in [KEY_KP_DIVIDE, KEY_DELETE, KEY_Q]:
+			single_movement_type = ROTATION
+			single_rotation_angle = RotationAngle
+
+		if event.scancode in [KEY_KP_MULTIPLY, KEY_END, KEY_E]:
+			single_movement_type = ROTATION
+			single_rotation_angle = -RotationAngle
+
+
