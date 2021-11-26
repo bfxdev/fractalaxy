@@ -139,7 +139,9 @@ func _process(_delta):
 	$Label.text  = "Arrow keys or mouse to pan - Mouse wheel or PgUp/PgDown to zoom"
 	$Label.text += " - Del/End to rotate - Drag/Pinch on mobile"
 	$Label.text += "\nOrigin: " + str(Origin)
-	$Label.text += "  Basis vectors: " + str(HorizontalBasis) + " " + str(VerticalBasis)
+	$Label.text += "\nBasis vectors: " + str(HorizontalBasis) + " " + str(VerticalBasis)
+	
+	$Label.text += "\nTouch points:" + str(previous_touch_points)
 
 func label_print(string):
 	$Label.text = string + "\n" + $Label.text
