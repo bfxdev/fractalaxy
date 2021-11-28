@@ -13219,7 +13219,7 @@ var Godot = (function () {
           const touch = touches[i]
           const pos = GodotInput.computePosition(touch, rect)
           GodotRuntime.setHeapValue(coords + (i * 2)    , pos[0], 'double')
-          GodotRuntime.setHeapValue(coords + (i * 2 + 8), pos[1], 'double')
+          GodotRuntime.setHeapValue(coords + (i * 2 + 1), pos[1], 'double')
           GodotRuntime.setHeapValue(ids + i, touch.identifier, 'i32')
         }
         func(type, touches.length)
