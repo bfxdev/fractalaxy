@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://main.gdshader" type="Shader" id=1]
 [ext_resource path="res://MapController2D.gd" type="Script" id=2]
 [ext_resource path="res://gradient-alpha-yellow-red-gray.png" type="Texture" id=3]
 [ext_resource path="res://Xolonium.tres" type="DynamicFont" id=4]
+[ext_resource path="res://GUI.tscn" type="PackedScene" id=5]
 
 [sub_resource type="ShaderMaterial" id=1]
 shader = ExtResource( 1 )
@@ -21,9 +22,6 @@ shader_param/Gradient = ExtResource( 3 )
 [node name="Control" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 anchor_right = 1.0
@@ -39,6 +37,7 @@ margin_bottom = 600.0
 script = ExtResource( 2 )
 
 [node name="Label" type="Label" parent="MarginContainer/FractalRenderer"]
+visible = false
 anchor_left = 0.01
 anchor_top = 0.01
 anchor_right = 1.0
@@ -49,6 +48,17 @@ custom_colors/font_outline_modulate = Color( 1, 1, 1, 1 )
 custom_colors/font_color_shadow = Color( 0, 0, 0, 1 )
 custom_fonts/font = ExtResource( 4 )
 text = "LOG TEXT"
-__meta__ = {
-"_edit_use_anchors_": false
-}
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/FractalRenderer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 10.0
+margin_top = 10.0
+margin_right = -10.0
+margin_bottom = -10.0
+
+[node name="GUI" parent="MarginContainer/FractalRenderer/MarginContainer" instance=ExtResource( 5 )]
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_right = 1004.0
+margin_bottom = 580.0

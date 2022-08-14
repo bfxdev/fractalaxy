@@ -16,6 +16,7 @@ config/icon="res://Fractalaxy-logo.png"
 
 [display]
 
+window/dpi/allow_hidpi=true
 window/handheld/orientation="sensor"
 
 [input_devices]
